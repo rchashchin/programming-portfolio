@@ -1,5 +1,6 @@
 import pygame
 import math
+import os
 from board import *
 
 board = Board()
@@ -52,14 +53,27 @@ def show_next_moves(board, font_size = 30):
             if board.field[y][x] is not None:
                 characters(board, board.field[y][x].get_char(), x, y)
 
+PIECE_NAMES = {'P': 'pawn', 'R': 'rook', 'k': 'knight', 'B': 'bishop', 'Q': 'queen', 'K': 'king'}
+IMG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'imgs')
+PIECE_SIZE = 80          # squares are 100x100, so this leaves a margin
+_image_cache = {}
+
+def get_piece_image(color, char):
+    key = (color, char)
+    if key not in _image_cache:
+        prefix = 'w' if color == 1 else 'b'
+        path = os.path.join(IMG_DIR, f'{prefix}_{PIECE_NAMES[char]}.png')
+        image = pygame.image.load(path).convert_alpha()
+        width, height = image.get_size()
+        scale = PIECE_SIZE / max(width, height)
+        _image_cache[key] = pygame.transform.smoothscale(image, (int(width * scale), int(height * scale)))
+    return _image_cache[key]
 
 def characters(board, char, x, y, font_size=30):
-    font = pygame.font.Font(None, font_size)
-    color = 'white' if board.field[y][x].color == 1 else 'black'
-    text = font.render(char, True, color)
-    text_rect = text.get_rect(center=(x * 100 + 50, y * 100 + 50))
-    screen.blit(text, text_rect)
-
+    image = get_piece_image(board.field[y][x].color, char)
+    rect = image.get_rect(center=(x * 100 + 50, y * 100 + 50))
+    screen.blit(image, rect)
+    
 pygame.init()
 
 size = height, weight = 950, 800
