@@ -4,7 +4,7 @@ Honours Mathematics student at the University of Waterloo. This repository colle
 
 ## Web
 
-- [`CelloWithElena_Web/`](CelloWithElena_Web): responsive one-page website for a professional cellist, with services, an experience timeline and a booking request form (HTML, CSS, JavaScript; Formspree for form submissions). [Live site](https://rchashchin.github.io/programming-portfolio/CelloWithElena_Web/)
+- [`CelloWithElena_Web/`](CelloWithElena_Web): responsive one-page website for a professional cellist, with services, an experience timeline and a booking request form (HTML, CSS, JavaScript; Formspree for form submissions). [Live site](https://rchashchin.github.io/cello-with-elena/)
 
 ## Python
 

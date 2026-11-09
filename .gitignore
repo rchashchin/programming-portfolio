@@ -1,0 +1,12 @@
+# macOS folder settings
+.DS_Store
+
+# Python virtual environments and cache files
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Editor settings
+.vscode/
+.idea/
