@@ -5,6 +5,13 @@ from board import *
 
 board = Board()
 
+MESSAGES = {'check': 'Check!', 'checkmate': 'Checkmate!', 'stalemate': 'Stalemate!'}
+# Draws one full frame of the game window:
+#   - the checkered squares and every piece,
+#   - orange highlights for legal target squares while a piece is held (next_moves=True),
+#   - a gold square under the king plus the check message ('ШАХ!' is Russian for 'check') when in check,
+#   - the grid lines, and a circle on the right showing whose turn it is.
+# Finishes with pygame.display.flip() so the frame appears on screen.
 def draw_board_game(screen, board, next_moves, font_size=30):
     font = pygame.font.Font(None, font_size)
 
@@ -19,20 +26,18 @@ def draw_board_game(screen, board, next_moves, font_size=30):
 
     if next_moves:
         show_next_moves(board)
-    if board.king_under_attack():
+
+    pygame.draw.rect(screen, pygame.Color('saddle brown'), ((820, 220), (120, 100)))
+
+    if board.status in ('check', 'checkmate'):
         king_row, king_col = board.king_coords()
         pygame.draw.rect(screen, pygame.Color('goldenrod'), ((king_col * 100, king_row * 100), (100, 100)))
-        color = 'black' if board.field[king_row][king_col].color == 2 else 'white'
-        # text1 = font.render('K', True, color)
-        text2 = font.render('ШАХ!', True, color)
-        # text_rect1 = text1.get_rect(center=(king_col * 100 + 50, king_row * 100 + 50))
-        text_rect2 = text2.get_rect(center=(870, 300))
-        # screen.blit(text1, text_rect1)
-        screen.blit(text2, text_rect2)
         characters(board, 'K', king_col, king_row)
-
-    else:
-        pygame.draw.rect(screen, pygame.Color('saddle brown'), ((820, 220), (120, 100)))
+    if board.status in MESSAGES:
+        color = 'black' if board.field[king_row][king_col].color == 2 else 'white'
+        text = font.render(MESSAGES[board.status], True, color)
+        text_rect = text.get_rect(center=(870, 300))
+        screen.blit(text, text_rect)
 
     for x in range(8):
         for y in range(8):
@@ -43,6 +48,9 @@ def draw_board_game(screen, board, next_moves, font_size=30):
     pygame.draw.circle(screen, pygame.Color(board.active_player()), (875, 400), 70)
     pygame.display.flip()
 
+# Highlights every square the held piece can legally move to, using board.check_move().
+# It reads the module-level variables start_row/start_col (set when the mouse is pressed)
+# and the global screen, then redraws the pieces so they stay on top of the highlights.
 def show_next_moves(board, font_size = 30):
     for x in range(8):
         for y in range(8):
@@ -58,6 +66,9 @@ IMG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'imgs')
 PIECE_SIZE = 80          # squares are 100x100, so this leaves a margin
 _image_cache = {}
 
+
+# Returns the scaled image for one piece type and colour (color 1 = white, 2 = black).
+# The PNG is loaded and resized the first time only, then stored in _image_cache for reuse.
 def get_piece_image(color, char):
     key = (color, char)
     if key not in _image_cache:
@@ -69,6 +80,9 @@ def get_piece_image(color, char):
         _image_cache[key] = pygame.transform.smoothscale(image, (int(width * scale), int(height * scale)))
     return _image_cache[key]
 
+# Draws the piece at board square (x, y) onto the screen, centred in its 100x100 square.
+# The name is left over from when it drew letters; it now draws the piece image.
+# (The 'char' parameter picks the image; 'font_size' is no longer used.)
 def characters(board, char, x, y, font_size=30):
     image = get_piece_image(board.field[y][x].color, char)
     rect = image.get_rect(center=(x * 100 + 50, y * 100 + 50))

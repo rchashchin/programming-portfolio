@@ -3,11 +3,12 @@ import copy
 from figures.__all__figures import *
 
 def is_correct_coords(coords):
-    return not (0 <= coords[0] <= 8 and 0 <= coords[1] <= 8)
+    return 0 <= coords[0] < 8 and 0 <= coords[1] < 8
 
 class Board:
     def __init__(self):
         self.active = WHITE
+        self.status = 'playing'
         self.field = [[None] * 8 for _ in range(8)]
 
         # Pawn
@@ -50,26 +51,19 @@ class Board:
         self.field[0][4] = King(WHITE, (0, 4))
         self.field[7][4] = King(BLACK, (7, 4))
 
+    # Plays a move from (start_row, start_col) to (end_row, end_col) for the active player.
+    # Legality is decided by check_move(). If the move is rejected nothing changes and False is returned.
+    # If it is allowed: the piece moves (capturing anything on the target), a pawn that reaches the last
+    # row is promoted, the turn passes to the other player, the new status (check / checkmate /
+    # stalemate) is worked out, and True is returned.
     def move(self, start_row, start_col, end_row, end_col):
 
-        if self.field[start_row][start_col] is None:
-            return False
-        if is_correct_coords((start_row, start_col)):
+        if not self.check_move(start_row, start_col, end_row, end_col):
             return False
 
         figure = self.field[start_row][start_col]
 
-        if figure.color != self.active:
-            return False
-
-        if figure.valid_move(end_row, end_col, self):
-            # if self.next_move_king_under_attack(end_row, end_col):
-            #     return False
-
-            if self.check_king_attacked(end_row, end_col, start_row, start_col):
-                return False
-
-            self.change_figure(end_row, end_col, start_row, start_col)
+        self.change_figure(end_row, end_col, start_row, start_col)
 
             # if self.king_under_attack():
             #     self.change_figure(end_row, end_col, start_row, start_col)
@@ -79,31 +73,57 @@ class Board:
             # else:
             #     self.change_figure(end_row, end_col, start_row, start_col)
 
-            if figure.get_char() == 'P' and ((self.active == WHITE and end_row == 7) or (self.active != WHITE and end_row == 0)):
-                self.transform_pawn(end_row, end_col)
-            self.next_player()
+        if figure.get_char() == 'P' and ((self.active == WHITE and end_row == 7) or (self.active != WHITE and end_row == 0)):
+            self.transform_pawn(end_row, end_col)
+        self.next_player()
+        self.update_status()
+        return True
 
     def check_move(self, start_row, start_col, end_row, end_col):
 
-        if self.field[start_row][start_col] is None:
-            return False
-        if is_correct_coords((start_row, start_col)):
+        if not is_correct_coords((start_row, start_col)) or not is_correct_coords((end_row, end_col)):
             return False
 
         figure = self.field[start_row][start_col]
 
-        if figure.color != self.active:
+        if figure is None or figure.color != self.active:
             return False
 
-        if figure.valid_move(end_row, end_col, self):
-            # if self.next_move_king_under_attack(end_row, end_col):
-            #     return False
+        if not figure.valid_move(end_row, end_col, self):
+            return False
 
-            if self.check_king_attacked(end_row, end_col, start_row, start_col):
-                return False
-            return True
-        return False
+        return not self.check_king_attacked(end_row, end_col, start_row ,start_col)
 
+    def legal_moves(self):
+        for start_row in range(8):
+            for start_col in range(8):
+                piece = self.field[start_row][start_col]
+                if piece is not None and piece.color == self.active:
+                    for end_row in range(8):
+                        for end_col in range(8):
+                            if self.check_move(start_row, start_col, end_row, end_col):
+                                yield(start_row, start_col, end_row, end_col)
+
+    def has_legal_move(self):
+        return next(self.legal_moves(), None) is not None
+
+    def update_status(self):
+        in_check = self.king_under_attack(self.active)
+        can_move = self.has_legal_move()
+        if in_check and not can_move:
+            self.status = 'checkmate'
+        elif in_check:
+            self.status = 'check'
+        elif not can_move:
+            self.status = 'stalemate'
+        else:
+            self.status = 'playing'
+
+    def winner(self):
+        if self.status != 'checkmate':
+            return None
+        return 'black' if self.active == WHITE else 'white'
+    
     def active_player(self):
         return 'white' if self.active == WHITE else 'black'
 
@@ -131,42 +151,37 @@ class Board:
         self.field[end_row][end_col].col = end_col
         self.field[start_row][start_col] = None
 
-    def change_figure_copy(self, board, end_row, end_col, start_row, start_col):
-        board.field[end_row][end_col] = board.field[start_row][start_col]
-        board.field[end_row][end_col].row = end_row
-        board.field[end_row][end_col].col = end_col
-        board.field[start_row][start_col] = None
-
     def check_king_attacked(self, end_row, end_col, start_row, start_col):
         board2 = self.copy_board()
-        board2.change_figure_copy(board2, end_row, end_col, start_row, start_col)
-        if self.king_under_attack_copy(board2):
-            return True
-        return False
+        mover_color = board2.field[start_row][start_col].color
+        board2.change_figure(end_row, end_col, start_row, start_col)
+        return board2.king_under_attack(mover_color)
 
     def copy_board(self):
-        boarde = copy.deepcopy(self)
-        return boarde
+        return copy.deepcopy(self)
 
-    def king_under_attack(self):
-        king_row, king_col = self.king_coords()
+    def find_king(self, color):
         for row in range(8):
             for col in range(8):
-                if self.field[row][col] is not None:
-                    if self.field[row][col].color != self.active:
-                        if self.field[row][col].valid_move(king_row, king_col, self):
+                piece = self.field[row][col]
+                if piece is not None and piece.color == color:
+                        if piece.get_char() == 'K':
+                            return row, col
+    def king_coords(self):
+            return self.find_king(self.active)
+
+    def king_under_attack(self, color):
+        king_row, king_col = self.king_coords()
+        if king_row is None or king_col is None:
+            return False
+        for row in range(8):
+            for col in range(8):
+                piece = self.field[row][col]
+                if piece is not None and piece.color != color:
+                        if piece.valid_move(king_row, king_col, self):
                             return True
         return False
 
-    def king_under_attack_copy(self, board):
-        king_row, king_col = self.king_coords()
-        for row in range(8):
-            for col in range(8):
-                if board.field[row][col] is not None:
-                    if board.field[row][col].color != board.active:
-                        if board.field[row][col].valid_move(king_row, king_col, self):
-                            return True
-        return False
 
     # def next_move_king_under_attack(self, end_row, end_col):
     #     king_row, king_col = self.king_coords()
@@ -179,12 +194,6 @@ class Board:
     #                         return True
     #     return False
  # нельзя двигать фигуры если ход оставляет короля без защиты в опасности
-    def king_coords(self):
-        for row in range(8):
-            for col in range(8):
-                if self.field[row][col] is not None:
-                    if self.field[row][col].color == self.active:
-                        if self.field[row][col].get_char() == 'K':
-                            return row, col
+    
 
 
