@@ -6,7 +6,8 @@ A two-player chess game written in Python from scratch, with a console version a
 - Object-oriented design: a `Figure` base class with `Pawn`, `Rook`, `Knight`, `Bishop`, `Queen`, and `King` subclasses
 - Legal-move validation per piece (blocked paths, captures, pawn movement)
 - Turn tracking for white and black
-- Check detection, and a rule that prevents moves that leave your own king in check
+- Full check handling: a move is only legal if it leaves your own king safe, so pinned pieces stay put, kings cannot step into attack zone, and a player in check must block, capture the attacker, or move the king
+- Checkmate and stalemate detection
 - Pawn promotion
 - Highlights the available moves while you hold a piece (GUI version)
 
@@ -26,15 +27,15 @@ Requires Python 3.8+.
 board.py        Board class: setup, move handling, check detection
 app.py          pygame GUI
 main.py         console interface
+test_board.py   tests for the rules
 figures/        one file per piece type
+imgs/           piece images used by the GUI
 ```
 
 ## Known limitations / next steps
-- Checkmate and stalemate are not detected yet
-- Castling and en passant are not implemented
-- A king can currently move into an attacked square (the check test uses the king's old position)
-- The GUI draws letters instead of the piece images in `imgs/`
+- Castling is not implemented
 - Pawn promotion uses a console prompt, even in the GUI version
+- No draw rules yet
 
 ## What I learned
 Designing a class hierarchy, separating game rules from display, and debugging move logic by comparing expected and actual board states.
